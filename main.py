@@ -5,7 +5,6 @@ import base64
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 import google.generativeai as genai
-from google.genai import types
 import logging
 
 # 配置日志
