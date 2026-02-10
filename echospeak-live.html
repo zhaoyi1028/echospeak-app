@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>EchoSpeak Live - Gemini AI Voice</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #FAFAFA; }
+        .app { max-width: 480px; margin: 0 auto; min-height: 100vh; background: white; box-shadow: 0 0 40px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #1A73E8 0%, #4285F4 100%); color: white; padding: 20px; text-align: center; position: sticky; top: 0; z-index: 100; }
+        .logo { font-size: 36px; margin-bottom: 8px; }
+        .app-title { font-size: 24px; font-weight: 600; margin-bottom: 4px; }
+        .app-subtitle { font-size: 14px; opacity: 0.9; }
+        .badge { display: inline-block; background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 12px; font-size: 11px; margin-top: 8px; }
+        .content { padding: 20px; }
+        .page-title { font-size: 20px; font-weight: 600; margin-bottom: 20px; }
+        .form-group { margin-bottom: 24px; }
+        .form-label { display: block; font-size: 14px; font-weight: 500; color: #5F6368; margin-bottom: 8px; }
+        .select { width: 100%; padding: 14px 16px; font-size: 16px; border: 2px solid #DADCE0; border-radius: 12px; background: white; appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 12px center; background-size: 20px; padding-right: 40px; }
+        .select:focus { outline: none; border-color: #1A73E8; }
+        .level-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .level-card { background: #F8F9FA; border: 2px solid #DADCE0; border-radius: 12px; padding: 16px; cursor: pointer; transition: all 0.2s; text-align: center; }
+        .level-card.selected { background: #E8F0FE; border-color: #1A73E8; }
+        .level-code { font-size: 18px; font-weight: 700; color: #1A73E8; }
+        .scenario-list { display: flex; flex-direction: column; gap: 12px; max-height: 60vh; overflow-y: auto; }
+        .scenario-card { background: #F8F9FA; border: 2px solid #DADCE0; border-radius: 12px; padding: 16px; cursor: pointer; transition: all 0.2s; }
+        .scenario-card.selected { background: #E8F0FE; border-color: #1A73E8; }
+        .scenario-name { font-size: 16px; font-weight: 600; color: #202124; }
+        .scenario-desc { font-size: 13px; color: #5F6368; margin-top: 4px; }
+        .btn { width: 100%; padding: 16px; font-size: 16px; font-weight: 600; border: none; border-radius: 12px; cursor: pointer; margin-top: 24px; }
+        .btn-primary { background: #1A73E8; color: white; }
+        .btn-primary:disabled { background: #DADCE0; color: #80868B; }
+        .chat-container { height: calc(100vh - 320px); overflow-y: auto; padding: 16px; background: #F8F9FA; border-radius: 12px; margin-bottom: 16px; }
+        .message { margin-bottom: 16px; animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .message-bubble { max-width: 80%; padding: 12px 16px; border-radius: 16px; line-height: 1.4; }
+        .message.ai .message-bubble { background: white; border: 1px solid #DADCE0; margin-right: auto; }
+        .message.user .message-bubble { background: #1A73E8; color: white; margin-left: auto; }
+        .message-role { font-size: 11px; color: #80868B; margin-bottom: 4px; font-weight: 500; }
+        .controls { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+        .record-btn { width: 72px; height: 72px; border-radius: 50%; border: none; background: #1A73E8; color: white; font-size: 32px; cursor: pointer; box-shadow: 0 4px 12px rgba(26, 115, 232, 0.4); transition: all 0.2s; }
+        .record-btn.recording { background: #EA4335; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        .status { font-size: 14px; color: #5F6368; text-align: center; }
+        .status.speaking { color: #1A73E8; font-weight: 500; }
+        .status.error { color: #EA4335; }
+        .status.connecting { color: #F9AB00; }
+        .connection-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 16px; font-size: 12px; font-weight: 500; }
+        .connection-badge.connected { background: #E6F4EA; color: #137333; }
+        .connection-badge.connecting { background: #FEF7E0; color: #E37400; }
+        .connection-badge.disconnected { background: #FCE8E6; color: #C5221F; }
+        .dot { width: 6px; height: 6px; border-radius: 50%; }
+        .dot.green { background: #137333; }
+        .dot.yellow { background: #E37400; animation: blink 1s infinite; }
+        .dot.red { background: #C5221F; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        
+        // 配置
+        const WS_URL = 'wss://web-production-f5023.up.railway.app/ws/conversation';
+        // const WS_URL = 'ws://localhost:8000/ws/conversation'; // 本地测试
+        
+        const SCENARIOS = [
+            { id: 'hotel-checkin', name: 'Hotel Check-In', nameZh: '酒店入住', icon: '🏨' },
+            { id: 'restaurant', name: 'At the Restaurant', nameZh: '餐厅点餐', icon: '🍽️' },
+            { id: 'grocery-shopping', name: 'Grocery Shopping', nameZh: '超市购物', icon: '🛒' },
+            { id: 'doctor-appointment', name: 'Doctor Appointment', nameZh: '看医生', icon: '👨‍⚕️' },
+            { id: 'bank-account', name: 'Opening Bank Account', nameZh: '开银行账户', icon: '🏦' }
+        ];
+        
+        const LANGUAGES = [
+            { code: 'zh-CN', name: '简体中文' },
+            { code: 'en', name: 'English' },
+            { code: 'es', name: 'Español' },
+            { code: 'ja', name: '日本語' }
+        ];
+        
+        const LEVELS = [
+            { code: 'A1', name: 'Beginner', vocab: '500-1000 words' },
+            { code: 'A2', name: 'Elementary', vocab: '1000-2000 words' },
+            { code: 'B1', name: 'Intermediate', vocab: '2000-3500 words' },
+            { code: 'B2', name: 'Upper Inter.', vocab: '3500-5000 words' },
+            { code: 'C1', name: 'Advanced', vocab: '5000-8000 words' },
+            { code: 'C2', name: 'Proficient', vocab: '8000+ words' }
+        ];
+        
+        function App() {
+            const [step, setStep] = useState('language');
+            const [language, setLanguage] = useState('');
+            const [level, setLevel] = useState('');
+            const [scenario, setScenario] = useState(null);
+            const [messages, setMessages] = useState([]);
+            const [isRecording, setIsRecording] = useState(false);
+            const [isSpeaking, setIsSpeaking] = useState(false);
+            const [connectionStatus, setConnectionStatus] = useState('disconnected');
+            const [error, setError] = useState(null);
+            
+            const wsRef = useRef(null);
+            const mediaRecorderRef = useRef(null);
+            const audioContextRef = useRef(null);
+            const audioQueueRef = useRef([]);
+            const isPlayingRef = useRef(false);
+            const chatEndRef = useRef(null);
+            
+            useEffect(() => {
+                chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            }, [messages]);
+            
+            const startTraining = async () => {
+                setStep('training');
+                setConnectionStatus('connecting');
+                setMessages([]);
+                
+                try {
+                    // Connect to backend WebSocket
+                    const ws = new WebSocket(WS_URL);
+                    wsRef.current = ws;
+                    
+                    ws.onopen = () => {
+                        console.log('✅ WebSocket connected');
+                        // Send initial config
+                        ws.send(JSON.stringify({
+                            scenario: scenario.id,
+                            level: level
+                        }));
+                    };
+                    
+                    ws.onmessage = async (event) => {
+                        const data = JSON.parse(event.data);
+                        
+                        if (data.type === 'ready') {
+                            setConnectionStatus('connected');
+                            addAIMessage(`${scenario.icon} Connected! I'm ready to practice ${scenario.name} with you. Let's start!`);
+                        }
+                        
+                        else if (data.type === 'audio') {
+                            // Play audio from Gemini
+                            await playAudio(data.data);
+                        }
+                        
+                        else if (data.type === 'text') {
+                            // Display AI text
+                            addAIMessage(data.text);
+                        }
+                        
+                        else if (data.type === 'turn_complete') {
+                            setIsSpeaking(false);
+                        }
+                        
+                        else if (data.type === 'error') {
+                            setError(data.message);
+                            setConnectionStatus('disconnected');
+                        }
+                    };
+                    
+                    ws.onerror = (error) => {
+                        console.error('WebSocket error:', error);
+                        setError('Connection error. Please refresh and try again.');
+                        setConnectionStatus('disconnected');
+                    };
+                    
+                    ws.onclose = () => {
+                        console.log('WebSocket closed');
+                        setConnectionStatus('disconnected');
+                    };
+                    
+                } catch (err) {
+                    console.error('Failed to connect:', err);
+                    setError('Failed to connect. Please check your connection.');
+                    setConnectionStatus('disconnected');
+                }
+            };
+            
+            const addAIMessage = (text) => {
+                setMessages(prev => [...prev, { type: 'ai', text }]);
+            };
+            
+            const addUserMessage = (text) => {
+                setMessages(prev => [...prev, { type: 'user', text }]);
+            };
+            
+            const playAudio = async (base64Audio) => {
+                setIsSpeaking(true);
+                
+                try {
+                    // Decode base64 audio
+                    const binaryString = atob(base64Audio);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+                    
+                    // Create audio context if needed
+                    if (!audioContextRef.current) {
+                        audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+                    }
+                    
+                    const audioContext = audioContextRef.current;
+                    const audioBuffer = await audioContext.decodeAudioData(bytes.buffer);
+                    
+                    // Play audio
+                    const source = audioContext.createBufferSource();
+                    source.buffer = audioBuffer;
+                    source.connect(audioContext.destination);
+                    
+                    source.onended = () => {
+                        setIsSpeaking(false);
+                    };
+                    
+                    source.start(0);
+                    
+                } catch (err) {
+                    console.error('Audio playback error:', err);
+                    setIsSpeaking(false);
+                }
+            };
+            
+            const handleRecord = async () => {
+                if (isRecording) {
+                    stopRecording();
+                } else {
+                    await startRecording();
+                }
+            };
+            
+            const startRecording = async () => {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ 
+                        audio: {
+                            channelCount: 1,
+                            sampleRate: 16000
+                        } 
+                    });
+                    
+                    const mediaRecorder = new MediaRecorder(stream, {
+                        mimeType: 'audio/webm;codecs=opus'
+                    });
+                    
+                    mediaRecorderRef.current = mediaRecorder;
+                    const audioChunks = [];
+                    
+                    mediaRecorder.ondataavailable = (event) => {
+                        if (event.data.size > 0) {
+                            audioChunks.push(event.data);
+                        }
+                    };
+                    
+                    mediaRecorder.onstop = async () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        
+                        // Convert to base64 PCM for Gemini
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                            const base64Audio = reader.result.split(',')[1];
+                            
+                            // Send to backend
+                            if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                                wsRef.current.send(JSON.stringify({
+                                    type: 'audio',
+                                    data: base64Audio
+                                }));
+                                
+                                // Signal end of turn
+                                wsRef.current.send(JSON.stringify({
+                                    type: 'end_turn'
+                                }));
+                                
+                                addUserMessage('[Audio message sent]');
+                            }
+                        };
+                        reader.readAsDataURL(audioBlob);
+                        
+                        // Stop tracks
+                        stream.getTracks().forEach(track => track.stop());
+                    };
+                    
+                    mediaRecorder.start();
+                    setIsRecording(true);
+                    setError(null);
+                    
+                } catch (err) {
+                    console.error('Microphone error:', err);
+                    setError('Cannot access microphone. Please check permissions.');
+                }
+            };
+            
+            const stopRecording = () => {
+                if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+                    mediaRecorderRef.current.stop();
+                    setIsRecording(false);
+                }
+            };
+            
+            const getConnectionBadge = () => {
+                const statusMap = {
+                    'connected': { text: 'Gemini Live Connected', class: 'connected', dotClass: 'green' },
+                    'connecting': { text: 'Connecting...', class: 'connecting', dotClass: 'yellow' },
+                    'disconnected': { text: 'Disconnected', class: 'disconnected', dotClass: 'red' }
+                };
+                
+                const status = statusMap[connectionStatus];
+                return (
+                    <div className={`connection-badge ${status.class}`}>
+                        <span className={`dot ${status.dotClass}`}></span>
+                        {status.text}
+                    </div>
+                );
+            };
+            
+            return (
+                <div className="app">
+                    <div className="header">
+                        <div className="logo">🗣️</div>
+                        <div className="app-title">EchoSpeak Live</div>
+                        <div className="app-subtitle">Powered by Gemini AI Voice</div>
+                        <span className="badge">Real-time AI Conversation</span>
+                    </div>
+                    
+                    <div className="content">
+                        {step === 'language' && (
+                            <>
+                                <h2 className="page-title">Select Your Native Language</h2>
+                                <div className="form-group">
+                                    <label className="form-label">母语 / Native Language</label>
+                                    <select className="select" value={language} onChange={(e) => setLanguage(e.target.value)}>
+                                        <option value="">Choose...</option>
+                                        {LANGUAGES.map(lang => (
+                                            <option key={lang.code} value={lang.code}>{lang.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <button className="btn btn-primary" onClick={() => setStep('level')} disabled={!language}>
+                                    Continue
+                                </button>
+                            </>
+                        )}
+                        
+                        {step === 'level' && (
+                            <>
+                                <h2 className="page-title">Select Your English Level</h2>
+                                <div className="level-grid">
+                                    {LEVELS.map(lvl => (
+                                        <div 
+                                            key={lvl.code}
+                                            className={`level-card ${level === lvl.code ? 'selected' : ''}`}
+                                            onClick={() => setLevel(lvl.code)}
+                                        >
+                                            <div className="level-code">{lvl.code}</div>
+                                            <div style={{fontSize: '13px', marginTop: '4px'}}>{lvl.name}</div>
+                                            <div style={{fontSize: '11px', color: '#80868B', marginTop: '2px'}}>{lvl.vocab}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <button className="btn btn-primary" onClick={() => setStep('scenario')} disabled={!level}>
+                                    Continue
+                                </button>
+                            </>
+                        )}
+                        
+                        {step === 'scenario' && (
+                            <>
+                                <h2 className="page-title">Choose a Scenario</h2>
+                                <div className="scenario-list">
+                                    {SCENARIOS.map(scn => (
+                                        <div 
+                                            key={scn.id}
+                                            className={`scenario-card ${scenario?.id === scn.id ? 'selected' : ''}`}
+                                            onClick={() => setScenario(scn)}
+                                        >
+                                            <div className="scenario-name">{scn.icon} {scn.name}</div>
+                                            <div className="scenario-desc">{scn.nameZh}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <button className="btn btn-primary" onClick={startTraining} disabled={!scenario}>
+                                    Start Live Training
+                                </button>
+                            </>
+                        )}
+                        
+                        {step === 'training' && (
+                            <>
+                                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px'}}>
+                                    <h2 className="page-title" style={{margin: 0}}>
+                                        {scenario.icon} {scenario.name}
+                                    </h2>
+                                    {getConnectionBadge()}
+                                </div>
+                                
+                                {error && <div className="status error">{error}</div>}
+                                
+                                <div className="chat-container">
+                                    {messages.map((msg, idx) => (
+                                        <div key={idx} className={`message ${msg.type}`}>
+                                            <div className="message-role">
+                                                {msg.type === 'ai' ? '🤖 Gemini AI' : '👤 You'}
+                                            </div>
+                                            <div className="message-bubble">{msg.text}</div>
+                                        </div>
+                                    ))}
+                                    <div ref={chatEndRef} />
+                                </div>
+                                
+                                <div className="controls">
+                                    {isSpeaking && (
+                                        <div className="status speaking">
+                                            🔊 Gemini is speaking...
+                                        </div>
+                                    )}
+                                    
+                                    <button 
+                                        className={`record-btn ${isRecording ? 'recording' : ''}`}
+                                        onClick={handleRecord}
+                                        disabled={isSpeaking || connectionStatus !== 'connected'}
+                                    >
+                                        {isRecording ? '⏹' : '🎤'}
+                                    </button>
+                                    
+                                    <div className="status">
+                                        {isRecording ? 'Recording... Tap to send' : 
+                                         connectionStatus !== 'connected' ? 'Connecting to Gemini...' :
+                                         'Tap microphone to speak'}
+                                    </div>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+        
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
