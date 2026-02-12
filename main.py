@@ -104,7 +104,7 @@ async def websocket_conversation(websocket: WebSocket):
                     import google.generativeai as genai
                     genai.configure(api_key=GEMINI_API_KEY)
                     
-                    model = genai.GenerativeModel('gemini-1.5-flash')
+                    model = genai.GenerativeModel('gemini-2.0-flash')
                     
                     prompt = f"{system_prompt}\n\nConversation:\n"
                     for msg in conversation[-6:]:
